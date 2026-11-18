@@ -1,7 +1,7 @@
 import * as ProductValidation from '../controllers/validation/ProductValidation.js'
 import ProductController from '../controllers/ProductController.js'
 import { Product } from '../models/models.js'
-import { handleFilesUpload } from '../middlewares/FileHandlerMiddleware.js'
+import { handleFilesUpload, persistFiles } from '../middlewares/FileHandlerMiddleware.js'
 import { hasRole, isLoggedIn } from '../middlewares/AuthMiddleware.js'
 import { checkEntityExists } from '../middlewares/EntityMiddleware.js'
 import * as ProductMiddleware from '../middlewares/ProductMiddleware.js'
@@ -16,6 +16,7 @@ const loadFileRoutes = (app) => {
       ProductValidation.create,
       handleValidation,
       ProductMiddleware.checkProductRestaurantOwnership,
+      persistFiles,
       ProductController.create
     )
   app.route('/products/popular')
@@ -34,6 +35,7 @@ const loadFileRoutes = (app) => {
       ProductMiddleware.checkProductOwnership,
       ProductValidation.update,
       handleValidation,
+      persistFiles,
       ProductController.update
     )
     .delete(

@@ -6,7 +6,7 @@ import { isLoggedIn, hasRole } from '../middlewares/AuthMiddleware.js'
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware.js'
 import { checkEntityExists } from '../middlewares/EntityMiddleware.js'
 import * as RestaurantMiddleware from '../middlewares/RestaurantMiddleware.js'
-import { handleFilesUpload } from '../middlewares/FileHandlerMiddleware.js'
+import { handleFilesUpload, persistFiles } from '../middlewares/FileHandlerMiddleware.js'
 import { Restaurant } from '../models/models.js'
 
 const loadFileRoutes = function (app) {
@@ -19,6 +19,7 @@ const loadFileRoutes = function (app) {
       handleFilesUpload(['logo', 'heroImage'], process.env.RESTAURANTS_FOLDER),
       RestaurantValidation.create,
       handleValidation,
+      persistFiles,
       RestaurantController.create)
 
   app.route('/restaurants/:restaurantId/showWithActiveProducts')
@@ -38,6 +39,7 @@ const loadFileRoutes = function (app) {
       handleFilesUpload(['logo', 'heroImage'], process.env.RESTAURANTS_FOLDER),
       RestaurantValidation.update,
       handleValidation,
+      persistFiles,
       RestaurantController.update)
     .delete(
       isLoggedIn,
