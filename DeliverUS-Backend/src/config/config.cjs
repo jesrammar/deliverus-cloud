@@ -9,7 +9,13 @@ module.exports = {
     appPort: process.env.APP_PORT,
     dialect: 'mariadb',
     dialectOptions: {
-      allowPublicKeyRetrieval: true
+      ssl: {
+        ca: require('fs').readFileSync(
+          require('path').join(__dirname, '../../certs/rds-ca.pem'),
+          'utf8'
+        ),
+        rejectUnauthorized: true
+      }
     },
     logging: false
   },

@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'
+import { readFileSync } from 'node:fs'
 dotenv.config()
 
 const nodeEnvironment = (process.env.NODE_ENV || 'development').trim()
@@ -12,6 +13,12 @@ const configEnvironments = {
     port: process.env.DATABASE_PORT,
     appPort: process.env.APP_PORT,
     dialect: 'mariadb',
+    dialectOptions: {
+      ssl: {
+        ca: readFileSync(new URL('../../certs/rds-ca.pem', import.meta.url), 'utf8'),
+        rejectUnauthorized: true
+      }
+    },
     logging: false
   },
   test: {

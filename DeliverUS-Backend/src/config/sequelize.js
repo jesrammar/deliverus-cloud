@@ -1,4 +1,5 @@
 import Sequelize from 'sequelize'
+import { readFileSync } from 'node:fs'
 
 const initSequelize = async () => {
   const { databaseName, databaseUsername, databasePassword, databaseHost, databasePort } = _getDatabaseConnectionProperties()
@@ -8,7 +9,10 @@ const initSequelize = async () => {
     port: databasePort,
     dialect: 'mariadb',
     dialectOptions: {
-      allowPublicKeyRetrieval: true
+      ssl: {
+        ca: readFileSync(new URL('../../certs/rds-ca.pem', import.meta.url), 'utf8'),
+        rejectUnauthorized: true
+      }
     }
     // logging: false
   })
