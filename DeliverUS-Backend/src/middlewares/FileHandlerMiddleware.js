@@ -1,5 +1,7 @@
 import fs from 'fs'
 import multer from 'multer'
+import { randomUUID } from 'node:crypto'
+import { isS3Enabled, putAsset } from '../services/S3Storage.js'
 
 const addFilenameToBody = (req, fieldNames) => {
   fieldNames.forEach(fieldName => {
@@ -10,9 +12,8 @@ const addFilenameToBody = (req, fieldNames) => {
     }
   })
 }
-
 const createMulter = (fieldNames, folder) => {
-  const storage = multer.diskStorage({
+  const storage = isS3Enabled() ? multer.memoryStorage() : multer.diskStorage({
     destination: function (req, file, cb) {
       fs.mkdirSync(folder, { recursive: true })
       cb(null, folder)
@@ -21,25 +22,39 @@ const createMulter = (fieldNames, folder) => {
       cb(null, Math.random().toString(36).substring(7) + '-' + Date.now() + '.' + file.originalname.split('.').pop())
     }
   })
-
-  if (fieldNames.length === 1) {
-    return multer({ storage }).single(fieldNames[0])
-  } else {
-    const fields = fieldNames.map(imageFieldName => ({ name: imageFieldName, maxCount: 1 }))
-    return multer({ storage }).fields(fields)
-  }
+  const options = { storage }
+  if (isS3Enabled()) options.limits = { fileSize: 2000000, files: fieldNames.length }
+  if (fieldNames.length === 1) return multer(options).single(fieldNames[0])
+  return multer(options).fields(fieldNames.map(name => ({ name, maxCount: 1 })))
 }
-
 const handleFilesUpload = (fieldNames, folder) => (req, res, next) => {
-  const multerInstance = createMulter(fieldNames, folder)
-  multerInstance(req, res, (err) => {
-    if (err) {
-      res.status(500).send({ error: err.message })
-    } else {
+  createMulter(fieldNames, folder)(req, res, err => {
+    if (err) return res.status(400).send({ error: err.message })
+    if (!isS3Enabled()) {
       addFilenameToBody(req, fieldNames)
-      next()
+      return next()
     }
+    const base = String(folder || '').replaceAll('\\', '/').replace(/^\.\//, '').replace(/^\/+|\/+$/g, '')
+    req.pendingS3Uploads = []
+    for (const fieldName of fieldNames) {
+      const file = req.files?.[fieldName]?.[0] || (req.file?.fieldname === fieldName ? req.file : null)
+      if (!file) continue
+      const ext = file.mimetype === 'image/png' ? 'png' : 'jpg'
+      const path = base + '/' + randomUUID() + '.' + ext
+      req.body[fieldName] = path
+      req.pendingS3Uploads.push({ path, file })
+    }
+    next()
   })
 }
-
-export { handleFilesUpload }
+const persistFiles = async (req, res, next) => {
+  if (!isS3Enabled() || !req.pendingS3Uploads?.length) return next()
+  try {
+    for (const { path, file } of req.pendingS3Uploads) await putAsset(path, file)
+    next()
+  } catch (err) {
+    console.error('S3 upload failed:', err.name)
+    res.status(502).send({ error: 'Could not store uploaded image' })
+  }
+}
+export { handleFilesUpload, persistFiles }
