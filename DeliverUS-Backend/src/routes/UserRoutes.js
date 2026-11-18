@@ -5,7 +5,7 @@ import RestaurantController from '../controllers/RestaurantController.js'
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware.js'
 import { isLoggedIn, hasRole } from '../middlewares/AuthMiddleware.js'
 import { checkEntityExists } from '../middlewares/EntityMiddleware.js'
-import { handleFilesUpload } from '../middlewares/FileHandlerMiddleware.js'
+import { handleFilesUpload, persistFiles } from '../middlewares/FileHandlerMiddleware.js'
 
 const loadFileRoutes = function (app) {
   app.route('/users')
@@ -14,6 +14,7 @@ const loadFileRoutes = function (app) {
       handleFilesUpload(['avatar'], process.env.AVATARS_FOLDER),
       UserValidation.update,
       handleValidation,
+      persistFiles,
       UserController.update)
     .delete(
       isLoggedIn,
@@ -23,12 +24,14 @@ const loadFileRoutes = function (app) {
       handleFilesUpload(['avatar'], process.env.AVATARS_FOLDER),
       UserValidation.create,
       handleValidation,
+      persistFiles,
       UserController.registerCustomer)
   app.route('/users/registerOwner')
     .post(
       handleFilesUpload(['avatar'], process.env.AVATARS_FOLDER),
       UserValidation.create,
       handleValidation,
+      persistFiles,
       UserController.registerOwner)
   app.route('/users/login')
     .post(
